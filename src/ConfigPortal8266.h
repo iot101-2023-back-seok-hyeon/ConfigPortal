@@ -41,7 +41,8 @@ String html_begin = ""
         "</style>"
         "<form action='/save'>"
             "<p><input type='text' name='ssid' placeholder='SSID'>"
-            "<p><input type='text' name='w_pw'placeholder='Password'>";
+            "<p><input type='text' name='w_pw'placeholder='Password'>"
+            "<p><input type='text' name='w_pw'placeholder='web relay address'>";
 
 String html_end = ""
             "<p><button type='submit'>Save</button>"
