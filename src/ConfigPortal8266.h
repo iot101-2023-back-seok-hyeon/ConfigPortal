@@ -18,6 +18,7 @@
 #include <DNSServer.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+#include <ESP8266HTTPClient.h>
 
 #define             JSON_BUFFER_LENGTH 3072
 #define             JSON_CHAR_LENGTH 1024
@@ -193,18 +194,22 @@ void configDevice() {
     webServer.on("/save", saveEnv);
     webServer.on("/reboot", reboot);
     webServer.on("/pre_boot", pre_reboot);
-    webServer.on("/toggle", HTTP_GET, [](){
-    String toggleURL = "/toggle";
 
-    // 만약 cfg["ad"]가 존재하고 문자열이며 비어있지 않다면
-    if (cfg.containsKey("ad") && cfg["ad"].is<String>() && !cfg["ad"].as<String>().isEmpty()) {
-        toggleURL = "/" + cfg["ad"].as<String>() + toggleURL;
-    }
-
-    // cfg["ad"] 값을 이용하여 새로운 URL로 리다이렉트
-    webServer.sendHeader("Location", toggleURL, true);
-    webServer.send(302, "text/plain", "Redirecting to " + toggleURL);
-});
+    pinMode(TOGGLE_PIN, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(TOGGLE_PIN), [](){
+        Serial.println("TOGGLE_PIN 눌림!");
+        HTTPClient http;
+        String toggleURL = "http://" + cfg["ad"] + "/toggle";
+        http.begin(toggleURL);
+        int httpCode = http.GET();
+        if (httpCode > 0) {
+            Serial.printf("%s로의 HTTP GET 요청 성공. 응답 코드: %d\n", toggleURL.c_str(), httpCode);
+        } else {
+            Serial.printf("%s로의 HTTP GET 요청 실패. 응답 코드: %d\n", toggleURL.c_str(), httpCode);
+        }
+        http.end();
+    }, FALLING);
+    
 
     webServer.onNotFound([]() {
         webServer.send(200, "text/html", html_begin + user_config_html + html_end);
@@ -218,18 +223,6 @@ void configDevice() {
         if(userConfigLoop != NULL) {
             (*userConfigLoop)();
         }
-        if(digitalRead(TOGGLE_PIN) == LOW) {
-            // If pressed, trigger the toggle action by making an HTTP request
-            // You can customize this URL according to your needs
-            WiFiClient client;
-            if (client.connect("board-ad값.local", 80)) {
-                client.println("GET /toggle HTTP/1.1");
-                client.println("Host: board-ad값.local");
-                client.println("Connection: close");
-                client.println();
-                delay(500);  // Add a delay if needed
-                client.stop();
-            }
-        }
+        
     }
 }
